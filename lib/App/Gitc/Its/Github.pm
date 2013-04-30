@@ -17,9 +17,11 @@ Support for Github Issue Tracking
 
 =cut
 
+use YAML::Syck;
 use Pithub::Issues;
 
 use App::Gitc::Util qw(
+    git
     project_config
     project_name
     command_name
@@ -66,7 +68,7 @@ our $github_conf;
 
 sub get_github_opts {
     if (not $github_conf and -e "$ENV{HOME}/.gitc/github.conf") {
-        $github_conf = YAML::LoadFile("$ENV{HOME}/.gitc/github.conf");
+        $github_conf = LoadFile("$ENV{HOME}/.gitc/github.conf");
     }
     else {
         $github_conf ||= {}; 
@@ -74,9 +76,17 @@ sub get_github_opts {
     
     my $project = project_name(); 
 
+    my ($owner, $repo) = @{$github_conf->{$project}}{qw/Owner Repo/};
+    unless ($owner and $repo) { # default to using the repo they cloned
+        my $url = git "config --get remote.origin.url";
+        my ($o, $r) = $url =~ m|/([^/]+?)/([^/]+?)(?:\.git)?$|;
+        $owner ||= $o;
+        $repo  ||= $r;
+    }
+
     return (
-        user => $github_conf->{$project}{Owner}, 
-        repo => $github_conf->{$project}{Repo}, 
+        user => $owner,
+        repo => $repo, 
         prepare_request => sub {
             return shift->authorization_basic(@{$github_conf}{qw(Username Password)});
         },
