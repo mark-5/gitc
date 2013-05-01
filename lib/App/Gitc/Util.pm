@@ -804,16 +804,17 @@ sub commit_decorations {
         }
 
         # process all loose refs
-        open my $refs, '-|', 'find .git/refs -type f -printf "%P\n"'
+        open my $refs, '-|', 'find .git/refs -type f'
             or die "Unable to run find: $!\n";
         while ( my $ref = <$refs> ) {
             chomp $ref;
             my $commit = do {
-                open my $fh, '<', ".git/refs/$ref";
+                open my $fh, '<', "$ref";
                 local $/;
                 <$fh>;
             };
             chomp $commit;
+            $ref =~ s{\.git/refs/}{};
             if ( my $stale_commit = delete $packed_refs{"refs/$ref"} ) {
                 delete $decorations{$stale_commit}{"refs/$ref"};
             }
