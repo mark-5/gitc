@@ -155,10 +155,6 @@ sub its_for_changeset
 {
     my $changeset = shift;
 
-    return its('eventum')
-        if ( $changeset =~ /[a-z]\d+/ ); # Lowercase letter, followed by numbers looks like eventum
-    return its('jira') if ( $changeset =~ /[A-Z].*\d+/ );
-
     return its;
 }
 
