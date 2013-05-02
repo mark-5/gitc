@@ -1678,11 +1678,15 @@ sub unpromoted {
 our $meta_cache;
 
 sub cache_meta_data {
-    my (@refs) = @_;
-    @refs = get_meta_tags(fetch => 0) unless @refs;
-    @refs = map {m|^meta/| ? $_ : "meta/$_"} @refs;
-
-    push @$meta_cache, map { {$_ => git "rev-parse $_"} } @refs;
+    my (@changesets) = @_;
+    our $meta_cache;
+    
+    for my $cs (@changesets) {
+        $cs =~ s{^meta/}{};
+        my $blob = git "rev-parse meta/$cs";
+        git_tag("tmp/$cs", $blob);
+        push @$meta_cache, {cs => $cs, blob => $blob};
+    }
 
     return;
 }
@@ -1691,9 +1695,12 @@ sub restore_meta_data {
     our $meta_cache;
     die "You cannot restore meta data without caching any data" unless $meta_cache;
 
-    git_tag('-d', $_) for map {keys %$_} @$meta_cache;
-    git_tag(%$_) for @$meta_cache;
-    git sprintf "push --force origin %s", join ' ', map {keys %$_} @$meta_cache;
+    for my $entry (@$meta_cache) {
+        git_tag('-d', "meta/$entry->{cs}");
+        git_tag("meta/$entry->{cs}", $entry->{blob});
+        git_tag('-d', "tmp/$entry->{cs}");
+    }
+    git sprintf "push --force origin %s", join ' ', map {"meta/$_->{cs}"} @$meta_cache;
 
     undef $meta_cache;
     return;
